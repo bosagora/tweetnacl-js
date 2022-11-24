@@ -84,6 +84,12 @@ declare namespace nacl {
         (msg: Uint8Array): Uint8Array;
         readonly hashLength: number;
     }
+
+    export interface ed2curve {
+        (edKeyPair: SignKeyPair): BoxKeyPair | null;
+        convertSecretKey(sk: Uint8Array): Uint8Array;
+        convertPublicKey(pk: Uint8Array): Uint8Array | null;
+    }
 }
 
 declare interface nacl {
@@ -95,4 +101,5 @@ declare interface nacl {
     hash: nacl.hash;
     verify(x: Uint8Array, y: Uint8Array): boolean;
     setPRNG(fn: (x: Uint8Array, n: number) => void): void;
+    ed2curve: nacl.ed2curve;
 }
