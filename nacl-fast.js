@@ -2070,6 +2070,37 @@ function crypto_sign_open(m, sm, n, pk) {
   return n;
 }
 
+// convert ed25519 public key to curve25519 public key
+// montgomeryX = (edwardsY + 1) * inverse(1 - edwardsY) mod p
+function crypto_sign_ed25519_pk_to_curve25519(z, pk) {
+  var q = [gf(), gf(), gf(), gf()],
+    a = gf(), b = gf();
+
+  if (unpackneg(q, pk)) return -1;
+
+  var y = q[1];
+
+  A(a, gf1, y);
+  Z(b, gf1, y);
+  inv25519(b, b);
+  M(a, a, b);
+
+  pack25519(z, a);
+  return 0;
+}
+
+// convert ed25519 secret key to curve25519 secret key
+function crypto_sign_ed25519_sk_to_curve25519(o, sk) {
+  var d = new Uint8Array(64), i;
+  crypto_hash(d, sk, 32);
+  d[0] &= 248;
+  d[31] &= 127;
+  d[31] |= 64;
+  for (i = 0; i < 32; i++) o[i] = d[i];
+  for (i = 0; i < 64; i++) d[i] = 0;
+  return 0;
+}
+
 var crypto_secretbox_KEYBYTES = 32,
     crypto_secretbox_NONCEBYTES = 24,
     crypto_secretbox_ZEROBYTES = 32,
@@ -2358,6 +2389,26 @@ nacl.verify = function(x, y) {
 
 nacl.setPRNG = function(fn) {
   randombytes = fn;
+};
+
+nacl.ed2curve = function(edKeyPair) {
+  var publicKey = new Uint8Array(32);
+  if (crypto_sign_ed25519_pk_to_curve25519(publicKey, edKeyPair.publicKey) !== 0) return null;
+  var secretKey = new Uint8Array(32);
+  crypto_sign_ed25519_sk_to_curve25519(secretKey, edKeyPair.secretKey);
+  return { publicKey: publicKey, secretKey: secretKey };
+};
+
+nacl.ed2curve.convertSecretKey = function(sk) {
+  var secretKey = new Uint8Array(32);
+  crypto_sign_ed25519_sk_to_curve25519(secretKey, sk);
+  return secretKey;
+};
+
+nacl.ed2curve.convertPublicKey = function(pk) {
+  var publicKey = new Uint8Array(32);
+  if (crypto_sign_ed25519_pk_to_curve25519(publicKey, pk) !== 0) return null;
+  return publicKey;
 };
 
 (function() {
